@@ -1,51 +1,127 @@
-import { Link } from 'react-router-dom'
-import Logo from '../components/Logo.jsx'
-import LiveFeed from '../components/LiveFeed.jsx'
+import { Link } from "react-router-dom";
+import Logo from "../components/Logo.jsx";
+import LiveFeed from "../components/LiveFeed.jsx";
 
 const watches = [
-  ['Alerts that reach the right people', 'We send each alert to the institutions a threat could affect, by sector or by name, not to everyone.'],
-  ['Clear steps to take', 'Every alert says what is happening and what to do about it, in order.'],
-  ['Email and dashboard', 'Owners, admins and analysts are emailed, and every alert waits in your dashboard.'],
-  ['A record of what you did', 'Your team notes what it did about each alert. Auditors and regulators can see it.'],
-  ['A fraud library and playbooks', 'Learn how each type of fraud works, with response guides to follow.'],
-]
+  [
+    "Proactive threat Intelligence",
+    "Our team actively hunts down new scams and localized attacks. We notify at-risk institution instantly and deliver precise steps to neutralize the threat.",
+  ],
+  [
+    "Precision Routing",
+    "Alerts are segmented by industry and threat profile, ensuring critical warnings reach the right stakeholders without creating alert fatigue.",
+  ],
+  [
+    "Actionable Playbooks",
+    "Every alert details the exact nature of the threat and provides a sequential, prioritized response strategy.",
+  ],
+  [
+    "Omnichannel Delivery",
+    "Owners, admins, and analysts receive push notifications via email, with all alerts securely archived in your central dashboard.",
+  ],
+  [
+    "Compliance Tracking",
+    "Document your incident response directly on the platform to maintain a verifiable audit trail for regulators and internal reviews.",
+  ],
+  [
+    "Knowledge Base",
+    "Equip your team with comprehensive threat profiles and localized incident response guides to understand how each fraud type operates.",
+  ],
+];
 
 const audience = [
-  ['Banks and microfinance', 'Fraudulent transfers and takeover of customer or staff accounts.'],
-  ['Hospitals and clinics', 'Patient records read or exported by people with no reason to.'],
-  ['Universities and schools', 'Altered grades, fees and admission records.'],
-  ['Government agencies', 'Ghost workers, diverted funds and leaked citizen data.'],
-  ['Insurance firms', 'Fake claims and tampered policy records.'],
-  ['Fintechs and payment providers', 'Unusual transaction volumes and API abuse.'],
-  ['NGOs and cooperatives', 'Misused donor funds and altered member balances.'],
-  ['Retail and logistics', 'Fake vendors, stock diversion and invoice fraud.'],
-]
+  [
+    "Banks and microfinance",
+    "Prevent unauthorized transfers and internal account takeovers.",
+  ],
+  [
+    "Hospitals and clinics",
+    "Secure sensitive patient records against unauthorized access and exfiltration.",
+  ],
+  [
+    "Universities and schools",
+    "Protect academic records, admission integrity, and fee processing portals.",
+  ],
+  [
+    "Government agencies",
+    "Identify ghost-workers payroll schemes, misappropriation of funds, and citizen data breaches.",
+  ],
+  [
+    "Insurance firms",
+    "Combat fraudulent claims and unauthorized policy modifications.",
+  ],
+  [
+    "Fintechs and payment providers",
+    "Flag API abuse and anomalous transaction patterns.",
+  ],
+  [
+    "NGOs and cooperatives",
+    "Safeguard donor capital, grant disbursements, and internal financial records.",
+  ],
+  [
+    "Retail and logistics",
+    "Prevent vendor impersonation, invoice fraud, and inventory diversion.",
+  ],
+];
 
 const steps = [
-  ['Create your account', 'Tell us about your institution, what you run and what worries you.'],
-  ['We check and approve you', 'Every institution is reviewed before it joins, so alerts stay trusted.'],
-  ['You get alerts that matter', 'When a threat could affect you, you are emailed and it appears in your dashboard.'],
-  ['You act and record it', 'Follow the steps, then note what your team did.'],
-]
+  [
+    "Profile Configuration:",
+    "Tell us about your institution, the infrastructure you run, and your specific risk vectors.",
+  ],
+  [
+    "Network Vetting",
+    "We verify all participants before they join to maintain a closed, trusted intelligence network.",
+  ],
+  [
+    "Targeted Intel",
+    "When a localized threat surfaces in your sector, you are alerted immediately via email and dashboard.",
+  ],
+  [
+    " Mitigate & Log",
+    "Execute the provided countermeasure steps and document your team's response for compliance.",
+  ],
+];
 
 const benefits = [
-  ['Hear about threats first', 'When one institution is attacked, the rest of the network is warned straight away.'],
-  ['Know exactly what to do', 'Each alert comes with steps, so your team is not guessing under pressure.'],
-  ['Only what concerns you', 'Alerts are matched to your sector, so you are not flooded.'],
-  ['The right people, the right access', 'Give analysts, admins and viewers only what their role needs.'],
-  ['A record you can show', 'Every response is logged for auditors and regulators.'],
-  ['Learn as you go', 'A fraud library and playbooks help your team recognise and handle each type of fraud.'],
-]
+  [
+    "The Early Warning Advantage",
+    "Benefit from collective intelligence. When one node in the network is targeted, the rest are immunized instantly.",
+  ],
+  [
+    "Eliminate Guesswork",
+    " Pre-defined action steps prevent hesitation during critical response windows.",
+  ],
+  [
+    "Zero Alert Fatigue",
+    "Alerts are matched specifically to your sector. You only see threats relevant to your operations.",
+  ],
+  [
+    "Role-Based Access Control",
+    "Distribute intelligence appropriately. Give analysts, administrators, and executives only what their roles require.",
+  ],
+  [
+    "Audit-Ready Logging",
+    "Maintain a verifiable history of proactive threat mitigation to show auditors and regulators.",
+  ],
+  [
+    "Continuous Enablement",
+    "Leverage our extensive library to continuously train your team on recognizing and handling new fraud typologies.",
+  ],
+];
 
 const Section = ({ id, title, intro, children, tint }) => (
-  <section id={id} className={`border-t border-line ${tint ? 'bg-surface' : ''}`}>
+  <section
+    id={id}
+    className={`border-t border-line ${tint ? "bg-surface" : ""}`}
+  >
     <div className="mx-auto max-w-6xl px-5 py-20">
       <h2 className="max-w-2xl text-3xl font-bold sm:text-4xl">{title}</h2>
       {intro && <p className="mt-4 max-w-2xl text-fg/70">{intro}</p>}
       <div className="mt-10">{children}</div>
     </div>
   </section>
-)
+);
 
 export default function Landing() {
   return (
@@ -54,12 +130,36 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
           <Logo />
           <nav className="flex items-center gap-2 text-sm font-medium">
-            <a href="#about" className="hidden px-3 py-2 hover:text-cyan lg:block">About</a>
-            <a href="#who" className="hidden px-3 py-2 hover:text-cyan lg:block">Who it’s for</a>
-            <a href="#how" className="hidden px-3 py-2 hover:text-cyan lg:block">How it helps</a>
-            <a href="#benefits" className="hidden px-3 py-2 hover:text-cyan lg:block">Benefits</a>
-            <Link to="/login" className="btn-ghost">Log in</Link>
-            <Link to="/signup" className="btn-primary">Get started</Link>
+            <a
+              href="#about"
+              className="hidden px-3 py-2 hover:text-cyan lg:block"
+            >
+              About
+            </a>
+            <a
+              href="#who"
+              className="hidden px-3 py-2 hover:text-cyan lg:block"
+            >
+              Who it’s for
+            </a>
+            <a
+              href="#how"
+              className="hidden px-3 py-2 hover:text-cyan lg:block"
+            >
+              How it helps
+            </a>
+            <a
+              href="#benefits"
+              className="hidden px-3 py-2 hover:text-cyan lg:block"
+            >
+              Benefits
+            </a>
+            <Link to="/login" className="btn-ghost">
+              Log in
+            </Link>
+            <Link to="/signup" className="btn-primary">
+              Get started
+            </Link>
           </nav>
         </div>
       </header>
@@ -68,27 +168,53 @@ export default function Landing() {
         {/* Hero: text + image */}
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-20 pt-12 lg:grid-cols-[1.2fr_1fr] lg:pt-20">
           <div>
-            <h1 className="text-hero font-bold">When a new fraud threat appears, you hear about it first, with clear steps to stop it.</h1>
+            <h1 className="text-[40px] font-bold leading-snug">
+              Stay Ahead of The Threat CURVE. Get Real-Time Fraud Alerts with
+              Actionable Steps
+              <br />
+              To Secure Your Institution.
+            </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-fg/75">
-              AbiSentry Gossip is a fraud alert network for institutions. When we see a new scam or attack, we warn every institution it could affect and tell them exactly what to do to protect their systems.
+              AbiRadar acts as an early-warning threat intelligence network for
+              businesses. We monitor local chatter, emerging scams, and attack
+              vectors to warn vulnerable institutions immediately-providing
+              exact countermeasures to protect your infrastructure.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/signup" className="btn-primary">Get started</Link>
-              <a href="#about" className="btn-ghost">Learn more</a>
+              <Link to="/signup" className="btn-primary">
+                Get started
+              </Link>
+              <a href="#about" className="btn-ghost">
+                Learn more
+              </a>
             </div>
-            <p className="mt-4 text-sm text-fg/60">Setup takes about five minutes. Every institution is reviewed before it joins.</p>
+            <p className="mt-4 text-sm text-fg/60">
+              Deployment takes under five minutes. Vetted access ensures network
+              Integrity.
+            </p>
           </div>
           <div className="flex justify-center">
-            <img src="/logo.jpg" alt="AbiSentry shield with an orbiting ribbon" className="w-full max-w-md mix-blend-lighten drop-shadow-[0_0_60px_rgba(47,212,247,0.25)]" />
+            <img
+              src="/logo.jpg"
+              alt="Abisentry shield with an orbiting ribbon"
+              className="w-full max-w-md mix-blend-lighten drop-shadow-[0_0_60px_rgba(47,212,247,0.25)]"
+            />
           </div>
         </section>
 
         {/* 1. About */}
-        <Section id="about" tint title="What AbiSentry Gossip is"
-          intro="A fraud alert service for institutions. Our team tracks new scams and attacks, tells the institutions at risk straight away, and gives them clear steps to protect their systems. Each institution records what it did.">
+        <Section
+          id="about"
+          tint
+          title="What AbiRadar is"
+          intro="A fraud alert service for institutions. Our team tracks new scams and attacks, tells the institutions at risk straight away, and gives them clear steps to protect their systems. Each institution records what it did."
+        >
           <dl className="divide-y divide-line">
             {watches.map(([t, d]) => (
-              <div key={t} className="grid gap-1 py-4 sm:grid-cols-[15rem_1fr] sm:gap-6">
+              <div
+                key={t}
+                className="grid gap-1 py-4 sm:grid-cols-[15rem_1fr] sm:gap-6"
+              >
                 <dt className="font-display text-lg font-bold">{t}</dt>
                 <dd className="text-fg/70">{d}</dd>
               </div>
@@ -97,7 +223,11 @@ export default function Landing() {
         </Section>
 
         {/* 2. Who it's for */}
-        <Section id="who" title="Who it is for" intro="Any institution that holds money, data or public trust, and needs to hear quickly when a new threat is going around.">
+        <Section
+          id="who"
+          title="Who it is for"
+          intro="Built for institutions where trust, data, and capital are paramount. If a new threat is circulating, you need to know first."
+        >
           <ul className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
             {audience.map(([t, d]) => (
               <li key={t} className="border-l-2 border-cyan pl-4">
@@ -114,9 +244,13 @@ export default function Landing() {
             <ol className="space-y-6">
               {steps.map(([t, d], i) => (
                 <li key={t} className="flex gap-4">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand font-display text-sm font-bold text-bg">{i + 1}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand font-display text-sm font-bold text-bg">
+                    {i + 1}
+                  </span>
                   <div>
-                    <h3 className="font-display text-lg font-bold leading-snug">{t}</h3>
+                    <h3 className="font-display text-lg font-bold leading-snug">
+                      {t}
+                    </h3>
                     <p className="mt-1 text-sm text-fg/70">{d}</p>
                   </div>
                 </li>
@@ -136,16 +270,18 @@ export default function Landing() {
               </div>
             ))}
           </dl>
-          <Link to="/signup" className="btn-primary mt-12">Get started</Link>
+          <Link to="/signup" className="btn-primary mt-12">
+            Get started
+          </Link>
         </Section>
       </main>
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-sm text-fg/60">
           <Logo size="h-9" />
-          <p>© {new Date().getFullYear()} AbiSentry Gossip</p>
+          <p>© {new Date().getFullYear()} AbiRadar</p>
         </div>
       </footer>
     </div>
-  )
+  );
 }
