@@ -1,10 +1,6 @@
 import nodemailer from "nodemailer";
 import { sleep } from "./util.js";
 
-// Sends one email. Settings are read each time, so they can be changed without touching code.
-//   EMAIL_PROVIDER=altermail | resend | sendgrid | brevo | postmark   plus EMAIL_API_KEY   (an API key from your email service)
-//   SMTP_HOST (+ SMTP_PORT, SMTP_USER, SMTP_PASS)         if you use SMTP instead
-//   neither                                               emails are printed in the terminal, nothing is sent
 const URLS = {
   altermail: "https://api.altermail-console.com.ng/v1/user/email/send",
   resend: "https://api.resend.com/emails",
@@ -14,19 +10,29 @@ const URLS = {
 };
 
 export function emailMode() {
-  const provider = (process.env.EMAIL_PROVIDER || "altermail").trim().toLowerCase();
-  if (provider === "altermail") return { kind: "altermail", explicit: true }; // print emails in the terminal, even if a key is set
+  const provider = (process.env.EMAIL_PROVIDER || "altermail")
+    .trim()
+    .toLowerCase();
+
   if (provider && provider !== "smtp") {
-    if (!URLS[provider]) return { kind: "invalid", provider };
+    if (!URLS[provider]) {
+      return { kind: "invalid", provider };
+    }
+
     return {
       kind: process.env.EMAIL_API_KEY ? "api" : "missing-key",
       provider,
     };
   }
-  if (process.env.EMAIL_API_KEY)
-    return { kind: "invalid", provider: "(not set)" }; // a key with no provider named
+
+  if (process.env.EMAIL_API_KEY) {
+    return { kind: "invalid", provider: "(not set)" };
+  }
+
   return {
-    kind: provider === "smtp" || process.env.SMTP_HOST ? "smtp" : "console",
+    kind: provider === "smtp" || process.env.SMTP_HOST
+      ? "smtp"
+      : "console",
   };
 }
 export const emailConfigured = () => ["api", "smtp"].includes(emailMode().kind);
@@ -44,12 +50,19 @@ export function describeEmail() {
   return `EMAIL_PROVIDER "${m.provider}" is not supported (use altermail, resend, sendgrid, brevo or postmark): emails will fail`;
 }
 
-// "AbiSentry Gossip <no-reply@x.com>" -> { name, email }
+// "AbiSentry Radar <admin@abiradar.top>" -> { name, email }
 const parseFrom = (s) => {
   const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(s);
+
   return m
-    ? { name: m[1].replace(/^"|"$/g, ""), email: m[2] }
-    : { name: "", email: s.trim() };
+    ? {
+        name: m[1].replace(/^"|"$/g, ""),
+        email: m[2],
+      }
+    : {
+        name: "",
+        email: s.trim(),
+      };
 };
 
 // Altermail allows 60 sends a minute per account, so bulk sends (alerts to many institutions) are spaced out.
@@ -162,7 +175,7 @@ async function viaApi(provider, from, { to, subject, text, html }) {
 }
 
 export async function sendEmail(msg, { bulk = false } = {}) {
-  const raw = process.env.MAIL_FROM || "Abisentry Radar <https://abiradar.top>";
+  const raw = process.env.MAIL_FROM || "Abisentry Radar <admin@abiradar.top>";
   const mode = emailMode();
   if (mode.kind === "api")
     return bulk
