@@ -157,3 +157,42 @@ export const incidentDecisionSchema = z.object({
   status: z.enum(["new", "reviewed", "dismissed"]),
   note: z.string().trim().max(500).optional(),
 });
+
+
+
+// ---- Two-Factor Authentication (TOTP) ----
+const otpCode = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator app.");
+
+
+export const totpVerifySchema = z.object({
+  code: otpCode,
+});
+
+
+export const totpDisableSchema = z.object({
+  password: z.string().min(1, "Enter your password.").max(72),
+  code: otpCode,
+});
+
+export const backupCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/, "Enter a valid backup code (e.g., XXXX-XXXX)."),
+});
+
+export const login2faSchema = z.object({
+  pendingToken: z.string().min(10, "Session expired. Please log in again."),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .refine(
+      (val) => /^\d{6}$/.test(val) || /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(val),
+      "Enter a 6-digit authenticator code or an XXXX-XXXX backup code.",
+    ),
+});
