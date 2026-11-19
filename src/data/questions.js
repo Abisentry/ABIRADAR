@@ -40,7 +40,7 @@ export const steps = [
   {
     id: 'alerts', title: 'How should we reach you?', hint: 'Tell us how you want to hear about new alerts.',
     fields: [
-      { name: 'channels', label: 'Alert channels', type: 'multi', required: true, options: opt('SMS', 'Email', 'WhatsApp', 'Slack or Teams', 'Phone call') },
+      { name: 'channels', label: 'Alert channels', type: 'multi', required: true, options: opt('Email', 'WhatsApp', 'Slack or Teams', 'Phone call') },
       { name: 'minSeverity', label: 'Which alerts should reach you?', type: 'single', required: true,
         options: [{ value: 'all', label: 'Everything' }, { value: 'warning', label: 'Warnings and critical' }, { value: 'critical', label: 'Critical only' }] },
       { name: 'responders', label: 'Who will respond to alerts?', type: 'select', required: true,

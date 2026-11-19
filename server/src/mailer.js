@@ -38,7 +38,7 @@ export function notifyNewSignup({ user, org, profile }) {
     text:
       rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
       `\n\nReview it: ${CLIENT}/dashboard/admin/institutions`,
-    html: `<h2>New AbiSentry Gossip signup</h2><table cellpadding="6">${rows
+    html: `<h2>New AbiSentry Radar signup</h2><table cellpadding="6">${rows
       .map(([k, v]) => `<tr><td><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`)
       .join(
         "",
