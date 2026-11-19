@@ -3,8 +3,7 @@ import { store, newId } from "./store/index.js";
 import { requireAuth, requireVerified } from "./auth.js";
 import { isAdmin,
     iso, 
-    mailAll,
-    createTotpSetup, 
+    mailAll
    } from "./util.js";
 import {
   decisionSchema,
@@ -505,26 +504,6 @@ router.patch("/incident-reports/:id", async (req, res) => {
   });
   res.json({ ok: true });
 });
-
-
-// 1. Start 2FA setup: generates secret + QR code (do NOT enable 2FA yet)
-router.post("/2fa/setup", requireAuth, async (req, res) => {
-  const user = await db.users.findById(req.user.id);
-  if (user.totpEnabled) {
-    return res.status(400).json({ message: "2FA is already enabled." });
-  }
-
-  const { secret, qrCodeDataUrl } = await createTotpSetup(user.email);
-
-  // Store temporarily as pending until the user proves they scanned it
-  await db.users.update(user.id, { pendingTotpSecret: secret });
-
-  res.json({
-    qrCodeDataUrl,
-    manualSecret: secret, // In case the user can't scan the QR code
-  });
-});
-
 
 
 export default router;

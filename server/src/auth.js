@@ -256,20 +256,16 @@ router.post(
 
 // 1. Start 2FA setup: generates secret + QR code (do NOT enable 2FA yet)
 router.post("/2fa/setup", requireAuth, async (req, res) => {
-  const user = await db.users.findById(req.user.id);
+  const user = await store.get("users", req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found." });
   if (user.totpEnabled) {
     return res.status(400).json({ message: "2FA is already enabled." });
   }
 
   const { secret, qrCodeDataUrl } = await createTotpSetup(user.email);
+  await store.update("users", user.id, { pendingTotpSecret: secret });
 
-  // Store temporarily as pending until the user proves they scanned it
-  await db.users.update(user.id, { pendingTotpSecret: secret });
-
-  res.json({
-    qrCodeDataUrl,
-    manualSecret: secret, // In case the user can't scan the QR code
-  });
+  res.json({ qrCodeDataUrl, manualSecret: secret });
 });
 
 // 2. Confirm 2FA setup: verifies first 6-digit code & activates 2FA
@@ -279,8 +275,8 @@ router.post("/2fa/confirm", requireAuth, async (req, res) => {
     return res.status(400).json({ errors: fieldErrors(parsed.error) });
   }
 
-  const user = await db.users.findById(req.user.id);
-  if (!user.pendingTotpSecret) {
+  const user = await store.get("users", req.user.id);
+  if (!user?.pendingTotpSecret) {
     return res.status(400).json({ message: "Start 2FA setup first." });
   }
 
@@ -296,13 +292,12 @@ router.post("/2fa/confirm", requireAuth, async (req, res) => {
     });
   }
 
-  // Generate backup codes, hash them before saving, and return plain codes once
   const plainBackupCodes = generateBackupCodes();
   const hashedBackupCodes = await Promise.all(
     plainBackupCodes.map((c) => bcrypt.hash(c, 10)),
   );
 
-  await db.users.update(user.id, {
+  await store.update("users", user.id, {
     totpSecret: user.pendingTotpSecret,
     pendingTotpSecret: null,
     totpEnabled: true,
@@ -316,14 +311,15 @@ router.post("/2fa/confirm", requireAuth, async (req, res) => {
 });
 
 // 3. Disable 2FA: requires password + valid 6-digit code
+// 3. Disable 2FA
 router.post("/2fa/disable", requireAuth, async (req, res) => {
   const parsed = totpDisableSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ errors: fieldErrors(parsed.error) });
   }
 
-  const user = await db.users.findById(req.user.id);
-  if (!user.totpEnabled || !user.totpSecret) {
+  const user = await store.get("users", req.user.id);
+  if (!user?.totpEnabled || !user.totpSecret) {
     return res.status(400).json({ message: "2FA is not enabled." });
   }
 
@@ -337,7 +333,7 @@ router.post("/2fa/disable", requireAuth, async (req, res) => {
     return res.status(400).json({ errors: { code: "Invalid 6-digit code." } });
   }
 
-  await db.users.update(user.id, {
+  await store.update("users", user.id, {
     totpSecret: null,
     pendingTotpSecret: null,
     totpEnabled: false,
