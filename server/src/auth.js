@@ -268,80 +268,6 @@ router.post("/2fa/setup", requireAuth, async (req, res) => {
   res.json({ qrCodeDataUrl, manualSecret: secret });
 });
 
-// 2. Confirm 2FA setup: verifies first 6-digit code & activates 2FA
-router.post("/2fa/confirm", requireAuth, async (req, res) => {
-  const parsed = totpVerifySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ errors: fieldErrors(parsed.error) });
-  }
-
-  const user = await store.get("users", req.user.id);
-  if (!user?.pendingTotpSecret) {
-    return res.status(400).json({ message: "Start 2FA setup first." });
-  }
-
-  const isValid = await verifyTotpCode(
-    user.pendingTotpSecret,
-    parsed.data.code,
-  );
-  if (!isValid) {
-    return res.status(400).json({
-      errors: {
-        code: "Invalid code. Check your authenticator app and try again.",
-      },
-    });
-  }
-
-  const plainBackupCodes = generateBackupCodes();
-  const hashedBackupCodes = await Promise.all(
-    plainBackupCodes.map((c) => bcrypt.hash(c, 10)),
-  );
-
-  await store.update("users", user.id, {
-    totpSecret: user.pendingTotpSecret,
-    pendingTotpSecret: null,
-    totpEnabled: true,
-    backupCodes: hashedBackupCodes,
-  });
-
-  res.json({
-    message: "Two-factor authentication enabled.",
-    backupCodes: plainBackupCodes,
-  });
-});
-
-// 3. Disable 2FA: requires password + valid 6-digit code
-// 3. Disable 2FA
-router.post("/2fa/disable", requireAuth, async (req, res) => {
-  const parsed = totpDisableSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ errors: fieldErrors(parsed.error) });
-  }
-
-  const user = await store.get("users", req.user.id);
-  if (!user?.totpEnabled || !user.totpSecret) {
-    return res.status(400).json({ message: "2FA is not enabled." });
-  }
-
-  const passwordOk = await bcrypt.compare(parsed.data.password, user.passwordHash);
-  if (!passwordOk) {
-    return res.status(400).json({ errors: { password: "Incorrect password." } });
-  }
-
-  const codeOk = await verifyTotpCode(user.totpSecret, parsed.data.code);
-  if (!codeOk) {
-    return res.status(400).json({ errors: { code: "Invalid 6-digit code." } });
-  }
-
-  await store.update("users", user.id, {
-    totpSecret: null,
-    pendingTotpSecret: null,
-    totpEnabled: false,
-    backupCodes: [],
-  });
-
-  res.json({ message: "Two-factor authentication disabled." });
-});
 
 // router.post("/login", limiter(20, 15), async (req, res) => {
 //   const parsed = loginSchema.safeParse(req.body);
@@ -391,7 +317,7 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ errors: fieldErrors(parsed.error) });
   }
 
-  const user = await db.users.findByEmail(parsed.data.email);
+  const user = await userByEmail(parsed.data.email);
   const validPassword =
     user && (await bcrypt.compare(parsed.data.password, user.passwordHash));
 
@@ -406,61 +332,138 @@ router.post("/login", async (req, res) => {
       requiresTwoFactor: true,
       pendingToken,
     });
-  }
-
-  // Otherwise, issue your normal full session/JWT
+  }  // Otherwise, issue your normal full session/JWT
   const sessionToken = issueFullSession(user);
   res.json({ requiresTwoFactor: false, token: sessionToken });
 });
 
+
+ router.post("/login/2fa", async (req, res) => {
+   const parsed = loginSchema.safeParse(req.body);
+   if (!parsed.success) {
+     return res.status(400).json({ errors: fieldErrors(parsed.error) });
+   }
+
+   const userId = verifyPending2faToken(parsed.data.pendingToken);
+   if (!userId) {
+     return res.status(401).json({
+       message: "Your 2FA session expired. Please log in again.",
+     });
+   }
+
+   const user = await store.get(userId);
+   if (!user || !user.totpEnabled || !user.totpSecret) {
+     return res.status(401).json({ message: "Unable to verify 2FA." });
+   }
+
+   const { code } = parsed.data;
+   let verified = false;
+
+   // Check if it's a 6-digit TOTP code
+   if (/^\d{6}$/.test(code)) {
+     verified = await verifyTotpCode(user.totpSecret, code);
+   } else {
+     // Otherwise check hashed single-use backup codes
+     for (let i = 0; i < user.backupCodes.length; i++) {
+       const match = await bcrypt.compare(code, user.backupCodes[i]);
+       if (match) {
+         verified = true;
+         // Burn the used backup code so it cannot be reused
+         const remainingCodes = user.backupCodes.filter((_, idx) => idx !== i);
+         await db.users.update(user.id, { backupCodes: remainingCodes });
+         break;
+       }
+     }
+   }
+
+   if (!verified) {
+     return res.status(400).json({
+       errors: { code: "Invalid code. Please try again." },
+     });
+   }
+
+   // 2FA passed — now issue the full session/JWT
+   const sessionToken = issueFullSession(user);
+   res.json({ token: sessionToken });
+ });
+
 // Step 2: Verify 6-digit TOTP or single-use Backup Code
-router.post("/login/2fa", async (req, res) => {
-  const parsed = login2faSchema.safeParse(req.body);
+router.post("/2fa/confirm", requireAuth, async (req, res) => {
+  const parsed = totpVerifySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ errors: fieldErrors(parsed.error) });
   }
 
-  const userId = verifyPending2faToken(parsed.data.pendingToken);
-  if (!userId) {
-    return res.status(401).json({
-      message: "Your 2FA session expired. Please log in again.",
-    });
+  const user = await store.get(req.user.id);
+  if (!user.pendingTotpSecret) {
+    return res.status(400).json({ message: "Start 2FA setup first." });
   }
 
-  const user = await db.users.findById(userId);
-  if (!user || !user.totpEnabled || !user.totpSecret) {
-    return res.status(401).json({ message: "Unable to verify 2FA." });
-  }
-
-  const { code } = parsed.data;
-  let verified = false;
-
-  // Check if it's a 6-digit TOTP code
-  if (/^\d{6}$/.test(code)) {
-    verified = await verifyTotpCode(user.totpSecret, code);
-  } else {
-    // Otherwise check hashed single-use backup codes
-    for (let i = 0; i < user.backupCodes.length; i++) {
-      const match = await bcrypt.compare(code, user.backupCodes[i]);
-      if (match) {
-        verified = true;
-        // Burn the used backup code so it cannot be reused
-        const remainingCodes = user.backupCodes.filter((_, idx) => idx !== i);
-        await db.users.update(user.id, { backupCodes: remainingCodes });
-        break;
-      }
-    }
-  }
-
-  if (!verified) {
+  const isValid = await verifyTotpCode(
+    user.pendingTotpSecret,
+    parsed.data.code,
+  );
+  if (!isValid) {
     return res.status(400).json({
-      errors: { code: "Invalid code. Please try again." },
+      errors: {
+        code: "Invalid code. Check your authenticator app and try again.",
+      },
     });
   }
 
-  // 2FA passed — now issue the full session/JWT
-  const sessionToken = issueFullSession(user);
-  res.json({ token: sessionToken });
+  // Generate backup codes, hash them before saving, and return plain codes once
+  const plainBackupCodes = generateBackupCodes();
+  const hashedBackupCodes = await Promise.all(
+    plainBackupCodes.map((c) => bcrypt.hash(c, 10)),
+  );
+
+  await store.update(user.id, {
+    totpSecret: user.pendingTotpSecret,
+    pendingTotpSecret: null,
+    totpEnabled: true,
+    backupCodes: hashedBackupCodes,
+  });
+
+  res.json({
+    message: "Two-factor authentication enabled.",
+    backupCodes: plainBackupCodes,
+  });
+});
+
+router.post("/2fa/disable", requireAuth, async (req, res) => {
+  const parsed = totpDisableSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ errors: fieldErrors(parsed.error) });
+  }
+
+  const user = await store.get(req.user.id);
+  if (!user.totpEnabled || !user.totpSecret) {
+    return res.status(400).json({ message: "2FA is not enabled." });
+  }
+
+  const passwordOk = await bcrypt.compare(
+    parsed.data.password,
+    user.passwordHash,
+  );
+  if (!passwordOk) {
+    return res
+      .status(400)
+      .json({ errors: { password: "Incorrect password." } });
+  }
+
+  const codeOk = await verifyTotpCode(user.totpSecret, parsed.data.code);
+  if (!codeOk) {
+    return res.status(400).json({ errors: { code: "Invalid 6-digit code." } });
+  }
+
+  await db.users.update(user.id, {
+    totpSecret: null,
+    pendingTotpSecret: null,
+    totpEnabled: false,
+    backupCodes: [],
+  });
+
+  res.json({ message: "Two-factor authentication disabled." });
 });
 
 
@@ -498,84 +501,6 @@ router.post(
   },
 );
 
-// 2. Confirm 2FA setup: verifies first 6-digit code & activates 2FA
-router.post("/2fa/confirm", requireAuth, async (req, res) => {
-  const parsed = totpVerifySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ errors: fieldErrors(parsed.error) });
-  }
-
-  const user = await db.users.findById(req.user.id);
-  if (!user.pendingTotpSecret) {
-    return res.status(400).json({ message: "Start 2FA setup first." });
-  }
-
-  const isValid = await verifyTotpCode(
-    user.pendingTotpSecret,
-    parsed.data.code,
-  );
-  if (!isValid) {
-    return res.status(400).json({
-      errors: {
-        code: "Invalid code. Check your authenticator app and try again.",
-      },
-    });
-  }
-
-  // Generate backup codes, hash them before saving, and return plain codes once
-  const plainBackupCodes = generateBackupCodes();
-  const hashedBackupCodes = await Promise.all(
-    plainBackupCodes.map((c) => bcrypt.hash(c, 10)),
-  );
-
-  await db.users.update(user.id, {
-    totpSecret: user.pendingTotpSecret,
-    pendingTotpSecret: null,
-    totpEnabled: true,
-    backupCodes: hashedBackupCodes,
-  });
-
-  res.json({
-    message: "Two-factor authentication enabled.",
-    backupCodes: plainBackupCodes,
-  });
-});
-
-router.post("/2fa/disable", requireAuth, async (req, res) => {
-  const parsed = totpDisableSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ errors: fieldErrors(parsed.error) });
-  }
-
-  const user = await db.users.findById(req.user.id);
-  if (!user.totpEnabled || !user.totpSecret) {
-    return res.status(400).json({ message: "2FA is not enabled." });
-  }
-
-  const passwordOk = await bcrypt.compare(
-    parsed.data.password,
-    user.passwordHash,
-  );
-  if (!passwordOk) {
-    return res
-      .status(400)
-      .json({ errors: { password: "Incorrect password." } });
-  }
-
-  const codeOk = await verifyTotpCode(user.totpSecret, parsed.data.code);
-  if (!codeOk) {
-    return res.status(400).json({ errors: { code: "Invalid 6-digit code." } });
-  }
-
-  await db.users.update(user.id, {
-    totpSecret: null,
-    pendingTotpSecret: null,
-    totpEnabled: false,
-    backupCodes: [],
-  });
-
-  res.json({ message: "Two-factor authentication disabled." });
-});
 
 // Same answer, and about the same wait, whether or not the email exists, so this cannot be used to find customers.
 router.post("/forgot-password", limiter(5, 60), async (req, res) => {
