@@ -1,25 +1,56 @@
-import { useState } from 'react'
-import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Search, FileText, Gauge, BookOpen, Building2, Users, LayoutDashboard, ShieldCheck, UserPlus, Lock } from 'lucide-react'
-import Logo from '../components/Logo.jsx'
-import { api } from '../lib/api.js'
-import { usePoll } from '../lib/usePoll.js'
-import VerifyPending from './VerifyPending.jsx'
-import { ROLES } from '../data/roles.js'
+import { useEffect, useRef, useState } from "react";
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import {
+  Bell,
+  Search,
+  FileText,
+  Gauge,
+  BookOpen,
+  Building2,
+  Users,
+  LayoutDashboard,
+  ShieldCheck,
+  UserPlus,
+  Lock,
+} from "lucide-react";
+import Logo from "../components/Logo.jsx";
+import { api } from "../lib/api.js";
+import { usePoll } from "../lib/usePoll.js";
+import VerifyPending from "./VerifyPending.jsx";
+import { ROLES } from "../data/roles.js";
+
+const IDLE_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+const WARN_AT_MS = 9 * 60 * 1000; // Show warning at 9 minutes (60s left)
+const ACTIVITY_KEY = "abi_last_active";
 
 // The eight dashboard functions, plus Team. Platform admins also get the owner pages.
 export const modules = [
-  { to: '/dashboard', end: true, label: 'Dashboard & Analytics', Icon: LayoutDashboard },
-  { to: 'alerts', label: 'Real-time Fraud Alerts', Icon: Bell, perm: 'alerts:view' },
-  { to: 'library', label: 'Fraud Library & Search', Icon: Search },
-  { to: 'reports', label: 'Weekly / Monthly Reports', Icon: FileText },
-  { to: 'risk', label: 'Risk Readiness Score', Icon: Gauge },
-  { to: 'playbooks', label: 'Playbooks & Response Guides', Icon: BookOpen },
-  { to: 'departments', label: 'Department Intelligence', Icon: Building2 },
-  { to: 'community', label: 'Community Reporting', Icon: Users },
-  { to: 'team', label: 'Team', Icon: UserPlus, perm: 'team:manage' },
-  { to: 'security', label: 'Security', Icon: Lock, perm: 'security:view' },
-]
+  {
+    to: "/dashboard",
+    end: true,
+    label: "Dashboard & Analytics",
+    Icon: LayoutDashboard,
+  },
+  {
+    to: "alerts",
+    label: "Real-time Fraud Alerts",
+    Icon: Bell,
+    perm: "alerts:view",
+  },
+  { to: "library", label: "Fraud Library & Search", Icon: Search },
+  { to: "reports", label: "Weekly / Monthly Reports", Icon: FileText },
+  { to: "risk", label: "Risk Readiness Score", Icon: Gauge },
+  { to: "playbooks", label: "Playbooks & Response Guides", Icon: BookOpen },
+  { to: "departments", label: "Department Intelligence", Icon: Building2 },
+  { to: "community", label: "Community Reporting", Icon: Users },
+  { to: "team", label: "Team", Icon: UserPlus, perm: "team:manage" },
+];
 const adminModules = [
   {
     to: "/dashboard/admin",
@@ -41,19 +72,85 @@ const adminModules = [
 
 export default function DashboardLayout() {
   const [me, setMe] = useState(null);
+  const [secondsLeft, setSecondsLeft] = useState(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const loggingOutRef = useRef(false);
 
-  // Re-checks every 30s, so approval and email verification show up without a manual refresh.
-  const refresh = () =>
+  const logout = async (timedOut = false) => {
+    if (loggingOutRef.current) return;
+    loggingOutRef.current = true;
+    localStorage.removeItem(ACTIVITY_KEY);
+    await api("/auth/logout", { method: "POST" }).catch(() => {});
+    navigate(timedOut ? "/login?timeout=1" : "/", { replace: true });
+  };
+
+  const getIdleMs = () => {
+    const last = Number(localStorage.getItem(ACTIVITY_KEY) || Date.now());
+    return Date.now() - last;
+  };
+
+  const stayLoggedIn = () => {
+    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    setSecondsLeft(null);
     api("/auth/me")
       .then(setMe)
       .catch(() => navigate("/login", { replace: true }));
-  usePoll(refresh, 30000);
-  const logout = async () => {
-    await api("/auth/logout", { method: "POST" });
-    navigate("/");
   };
+
+  // Track active user interaction across tabs and enforce the 10-minute idle limit
+  useEffect(() => {
+    let lastWrite = Date.now();
+    localStorage.setItem(ACTIVITY_KEY, String(lastWrite));
+
+    const recordActivity = () => {
+      // Once the final 60s warning appears, require an explicit click on "Stay logged in"
+      if (getIdleMs() >= WARN_AT_MS) return;
+      const now = Date.now();
+      if (now - lastWrite > 5000) {
+        lastWrite = now;
+        localStorage.setItem(ACTIVITY_KEY, String(now));
+      }
+    };
+
+    const events = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+    ];
+    events.forEach((ev) =>
+      window.addEventListener(ev, recordActivity, { passive: true }),
+    );
+
+    const timer = setInterval(() => {
+      const idleMs = getIdleMs();
+      if (idleMs >= IDLE_LIMIT_MS) {
+        logout(true);
+      } else if (idleMs >= WARN_AT_MS) {
+        setSecondsLeft(Math.max(1, Math.ceil((IDLE_LIMIT_MS - idleMs) / 1000)));
+      } else {
+        setSecondsLeft(null);
+      }
+    }, 1000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, recordActivity));
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Re-checks every 30s while active; pauses once warning/idle triggers so cookie expires cleanly
+  const refresh = () => {
+    const idleMs = getIdleMs();
+    if (idleMs >= IDLE_LIMIT_MS) return logout(true);
+    if (idleMs >= WARN_AT_MS) return;
+    return api("/auth/me")
+      .then(setMe)
+      .catch(() => navigate("/login", { replace: true }));
+  };
+  usePoll(refresh, 30000);
 
   if (!me) return <p className="p-10 text-fg/70">Loading your dashboard…</p>;
   if (!me.user.emailVerified)
@@ -61,12 +158,11 @@ export default function DashboardLayout() {
       <VerifyPending
         email={me.user.email}
         onRefresh={refresh}
-        onLogout={logout}
+        onLogout={() => logout(false)}
       />
     );
 
   const org = me.organisation;
-  // The platform owner has no institution of their own: they go straight to the review page.
   const adminOnly = !org && me.user.isAdmin;
   if (adminOnly && pathname === "/dashboard")
     return <Navigate to="/dashboard/admin" replace />;
@@ -74,15 +170,15 @@ export default function DashboardLayout() {
     return (
       <p className="p-10 text-fg/70">
         No institution is linked to this account.{" "}
-        <button className="underline" onClick={logout}>
+        <button className="underline" onClick={() => logout(false)}>
           Log out
         </button>
       </p>
     );
+
   const allowed = modules.filter(
     (m) => !m.perm || org?.permissions?.includes(m.perm),
   );
-  // 2. Update the `nav` line (around line 48) so Security appears for all users (including adminOnly):
   const securityItem = {
     to: "/dashboard/security",
     label: "Security (2FA)",
@@ -131,11 +227,32 @@ export default function DashboardLayout() {
               {me.user.fullName} ·{" "}
               {org ? ROLES[org.role]?.label : "Platform admin"}
             </span>
-            <button className="btn-ghost !px-3 !py-1.5" onClick={logout}>
+            <button
+              className="btn-ghost !px-3 !py-1.5"
+              onClick={() => logout(false)}
+            >
               Log out
             </button>
           </div>
         </header>
+        {secondsLeft !== null && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-signal/40 bg-signal/15 px-5 py-3 text-sm"
+          >
+            <p className="font-medium text-signal">
+              You will be logged out due to inactivity in{" "}
+              <span className="font-mono font-bold">{secondsLeft}s</span>.
+            </p>
+            <button
+              type="button"
+              onClick={stayLoggedIn}
+              className="btn-primary !px-3 !py-1.5 text-xs"
+            >
+              Stay logged in
+            </button>
+          </div>
+        )}
         {org?.status === "pending" && (
           <p
             role="status"

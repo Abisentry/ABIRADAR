@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../components/Logo.jsx";
 import { api } from "../lib/api.js";
 
@@ -10,6 +10,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const timedOut = searchParams.get("timeout") === "1";
 
   const set = (k) => (e) => {
     setForm({ ...form, [k]: e.target.value });
@@ -62,6 +64,15 @@ export default function Login() {
       {!pendingToken ? (
         <>
           <h1 className="mt-10 text-3xl font-bold">Log in to your dashboard</h1>
+          {timedOut && !pendingToken && (
+            <p
+              role="status"
+              className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-amber"
+            >
+              You were logged out due to 10 minutes of inactivity. Please log in
+              again.
+            </p>
+          )}
           <form onSubmit={submit} noValidate className="mt-8 space-y-5">
             <div>
               <label

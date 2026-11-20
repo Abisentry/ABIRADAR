@@ -36,7 +36,7 @@ import { orgForUser, permissionsFor } from "./access.js";
 import { emptyStats } from "./stats.js";
 
 const COOKIE = "abi_session";
-const WEEK = 7 * 24 * 60 * 60 * 1000;
+const IDLE_MS = 10 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000;
@@ -54,7 +54,7 @@ const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 12);
 const cookieOpts = () => ({
   httpOnly: true,
   sameSite: "lax",
-  maxAge: WEEK,
+  maxAge: IDLE_MS,
   path: "/",
   secure:
     process.env.NODE_ENV === "production" ||
@@ -64,7 +64,7 @@ const startSession = (res, user) =>
   res.cookie(
     COOKIE,
     jwt.sign({ sub: user.id, v: user.sessionVersion ?? 0 }, secret, {
-      expiresIn: "7d",
+      expiresIn: "10m",
     }),
     cookieOpts(),
   );
@@ -142,6 +142,7 @@ export async function requireAuth(req, res, next) {
     });
   }
   req.user = user;
+   startSession(res, user);
   next();
 }
 
