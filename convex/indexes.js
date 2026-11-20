@@ -1,18 +1,36 @@
 // Every table and the indexes it has. The Convex schema is built from this list, the Convex functions use it to pick
 // an index for each query, and the local test store refuses any query that no index here could answer.
 export const TABLES = {
-  users: [['by_email', ['email']]],
+  users: [["by_email", ["email"]]],
   emailIndex: [],
-  tokens: [['by_userId', ['userId']]],
-  organisations: [['by_createdAt', ['createdAt']]],
-  members: [['by_orgId', ['orgId']]],
-  invitations: [['by_orgId', ['orgId']], ['by_tokenHash', ['tokenHash']]],
-  alerts: [['by_createdAt', ['createdAt']]],
-  deliveries: [['by_orgId_sentAt', ['orgId', 'sentAt']], ['by_alertId', ['alertId']]],
-  incidentReports: [['by_orgId', ['orgId']], ['by_createdAt', ['createdAt']], ['by_status', ['status']]],
-  fraudEntries: [['by_sort', ['sort']], ['by_name', ['name']]],
-  posts: [['by_kind', ['kind']]],
-}
+  tokens: [["by_userId", ["userId"]]],
+  organisations: [["by_createdAt", ["createdAt"]]],
+  members: [["by_orgId", ["orgId"]]],
+  invitations: [
+    ["by_orgId", ["orgId"]],
+    ["by_tokenHash", ["tokenHash"]],
+  ],
+  alerts: [["by_createdAt", ["createdAt"]]],
+  deliveries: [
+    ["by_orgId_sentAt", ["orgId", "sentAt"]],
+    ["by_alertId", ["alertId"]],
+  ],
+  incidentReports: [
+    ["by_orgId", ["orgId"]],
+    ["by_createdAt", ["createdAt"]],
+    ["by_status", ["status"]],
+  ],
+  fraudEntries: [
+    ["by_sort", ["sort"]],
+    ["by_name", ["name"]],
+  ],
+  posts: [["by_kind", ["kind"]]],
+  // Mandatory 2FA challenges
+  twoFactorChallenges: [
+    ["by_userId", ["userId"]],
+    ["by_expiresAt", ["expiresAt"]],
+  ],
+};
 
 // Which index answers a query? Equality on the index's first fields, then optionally an ordering on the next one.
 // Other equality conditions are checked on the rows that come back. Returns null if no index fits.
