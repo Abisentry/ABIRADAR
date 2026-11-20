@@ -21,13 +21,23 @@ export const modules = [
   { to: 'security', label: 'Security', Icon: Lock, perm: 'security:view' },
 ]
 const adminModules = [
-  { to: '/dashboard/admin', end: true, label: 'Platform overview', Icon: ShieldCheck },
-  { to: '/dashboard/admin/institutions', label: 'Institutions', Icon: Building2 },
-  { to: '/dashboard/admin/alerts', label: 'Alerts', Icon: Bell },
-  { to: '/dashboard/admin/library', label: 'Fraud library', Icon: Search },
-  { to: '/dashboard/admin/reviews', label: 'Fraud reviews', Icon: FileText },
-  { to: '/dashboard/admin/community', label: 'Community', Icon: Users },
-]
+  {
+    to: "/dashboard/admin",
+    end: true,
+    label: "Platform overview",
+    Icon: ShieldCheck,
+  },
+  {
+    to: "/dashboard/admin/institutions",
+    label: "Institutions",
+    Icon: Building2,
+  },
+  { to: "/dashboard/admin/users", label: "Users", Icon: Users },
+  { to: "/dashboard/admin/alerts", label: "Alerts", Icon: Bell },
+  { to: "/dashboard/admin/library", label: "Fraud library", Icon: Search },
+  { to: "/dashboard/admin/reviews", label: "Fraud reviews", Icon: FileText },
+  { to: "/dashboard/admin/community", label: "Community", Icon: Users },
+];
 
 export default function DashboardLayout() {
   const [me, setMe] = useState(null);

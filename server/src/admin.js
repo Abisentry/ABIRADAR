@@ -3,7 +3,8 @@ import { store, newId } from "./store/index.js";
 import { requireAuth, requireVerified } from "./auth.js";
 import { isAdmin,
     iso, 
-    mailAll
+    mailAll,
+    sha
    } from "./util.js";
 import {
   decisionSchema,
@@ -504,6 +505,131 @@ router.patch("/incident-reports/:id", async (req, res) => {
   });
   res.json({ ok: true });
 });
+
+
+// ---------- Platform owner user controls ----------
+
+router.get("/users", async (_req, res) => {
+  const [users, members, orgs] = await Promise.all([
+    store.find("users", {}),
+    store.find("members", {}),
+    store.find("organisations", {}),
+  ]);
+
+  const orgById = Object.fromEntries(orgs.map((o) => [o.id, o]));
+  const memberByUser = Object.fromEntries(members.map((m) => [m.id, m]));
+
+  const list = users
+    .sort(byNewest)
+    .map((u) => {
+      const m = memberByUser[u.id];
+      const org = m ? orgById[m.orgId] : null;
+      return {
+        id: u.id,
+        fullName: u.fullName,
+        email: u.email,
+        emailVerified: !!u.emailVerifiedAt,
+        totpEnabled: !!u.totpEnabled,
+        suspended: !!u.suspended,
+        suspendedReason: u.suspendedReason || null,
+        isAdmin: isAdmin(u.email),
+        role: m?.role || null,
+        orgId: org?.id || null,
+        orgName: org?.name || null,
+        createdAt: iso(u.createdAt),
+      };
+    });
+
+  res.json({ users: list });
+});
+
+router.post("/users/:id/suspend", async (req, res) => {
+  const target = await store.get("users", req.params.id);
+  if (!target) return res.status(404).json({ error: "User not found." });
+  if (target.id === req.user.id || isAdmin(target.email)) {
+    return res.status(400).json({ error: "Cannot suspend an admin account." });
+  }
+
+  const suspend = Boolean(req.body?.suspend);
+  const reason =
+    typeof req.body?.reason === "string"
+      ? req.body.reason.trim().slice(0, 300)
+      : "";
+
+  await store.update("users", target.id, {
+    suspended: suspend,
+    suspendedReason: suspend && reason ? reason : null,
+    sessionVersion: (target.sessionVersion || 0) + 1,
+  });
+
+  res.json({ ok: true, suspended: suspend });
+});
+
+router.post("/users/:id/reset-2fa", async (req, res) => {
+  const target = await store.get("users", req.params.id);
+  if (!target) return res.status(404).json({ error: "User not found." });
+
+  await store.update("users", target.id, {
+    totpEnabled: false,
+    totpSecret: null,
+    pendingTotpSecret: null,
+    backupCodes: [],
+    sessionVersion: (target.sessionVersion || 0) + 1,
+  });
+
+  res.json({ ok: true });
+});
+
+router.post("/users/:id/revoke-sessions", async (req, res) => {
+  const target = await store.get("users", req.params.id);
+  if (!target) return res.status(404).json({ error: "User not found." });
+
+  await store.update("users", target.id, {
+    sessionVersion: (target.sessionVersion || 0) + 1,
+  });
+
+  res.json({ ok: true });
+});
+
+router.delete("/users/:id", async (req, res) => {
+  const target = await store.get("users", req.params.id);
+  if (!target) return res.status(404).json({ error: "User not found." });
+  if (target.id === req.user.id || isAdmin(target.email)) {
+    return res.status(400).json({ error: "Cannot delete an admin account." });
+  }
+
+  const member = await store.get("members", target.id);
+  const org = member ? await store.get("organisations", member.orgId) : null;
+
+  if (org && org.ownerId === target.id && (org.teamSize || 1) > 1) {
+    return res.status(400).json({
+      error:
+        "This user owns an institution with other team members. Delete the institution or reassign ownership first.",
+    });
+  }
+
+  const tokens = await store.find("tokens", { where: { userId: target.id } });
+
+  await store.tx(async (t) => {
+    t.delete("users", target.id);
+    t.delete("emailIndex", sha(target.email));
+    if (member) t.delete("members", target.id);
+    for (const tok of tokens) t.delete("tokens", tok.id);
+
+    if (org) {
+      if (org.ownerId === target.id) {
+        t.delete("organisations", org.id);
+      } else {
+        t.update("organisations", org.id, {
+          teamSize: Math.max(0, (org.teamSize || 1) - 1),
+        });
+      }
+    }
+  });
+
+  res.json({ ok: true });
+});
+
 
 
 export default router;

@@ -27,6 +27,7 @@ import AdminLibrary from './dashboard/AdminLibrary.jsx'
 import AdminPosts from './dashboard/AdminPosts.jsx'
 import AdminCommunity from './dashboard/AdminCommunity.jsx'
 import Security from "./dashboard/Security.jsx"
+import AdminUsers from "./dashboard/AdminUsers.jsx"
 
 export default function App() {
   return (
@@ -126,6 +127,14 @@ export default function App() {
           element={
             <AdminGuard>
               <AdminAlertDetail />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/users"
+          element={
+            <AdminGuard>
+              <AdminUsers />
             </AdminGuard>
           }
         />

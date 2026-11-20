@@ -133,6 +133,14 @@ export async function requireAuth(req, res, next) {
   } catch {
     return res.status(401).json({ error: "Please log in." });
   }
+    if (user.suspended) {
+    res.clearCookie(COOKIE, { ...cookieOpts(), maxAge: undefined });
+    return res.status(403).json({
+      error: user.suspendedReason
+        ? `Account suspended: ${user.suspendedReason}`
+        : "Your account has been suspended. Contact support.",
+    });
+  }
   req.user = user;
   next();
 }
@@ -277,7 +285,16 @@ router.post("/login", limiter(20, 15), async (req, res) => {
       });
     }
     return res.status(401).json({ error: "Invalid email or password." });
+    
   }
+
+   if (user.suspended) {
+     return res.status(403).json({
+       error: user.suspendedReason
+         ? `Account suspended: ${user.suspendedReason}`
+         : "Your account has been suspended. Contact support.",
+     });
+   }
 
   if (user.failedLogins || user.lockedUntil) {
     await store.update("users", user.id, { failedLogins: 0, lockedUntil: null });
