@@ -26,6 +26,7 @@ import Community from './dashboard/Community.jsx'
 import AdminLibrary from './dashboard/AdminLibrary.jsx'
 import AdminPosts from './dashboard/AdminPosts.jsx'
 import AdminCommunity from './dashboard/AdminCommunity.jsx'
+import Security from "./dashboard/Security.jsx"
 
 export default function App() {
   return (
@@ -39,25 +40,116 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Overview />} />
-        <Route path="alerts" element={<Guard perm="alerts:view"><Alerts /></Guard>} />
+        <Route
+          path="alerts"
+          element={
+            <Guard perm="alerts:view">
+              <Alerts />
+            </Guard>
+          }
+        />
         <Route path="library" element={<Library />} />
-        <Route path="team" element={<Guard perm="team:manage"><Team /></Guard>} />
-        <Route path="admin" element={<AdminGuard><AdminOverview /></AdminGuard>} />
-        <Route path="admin/institutions" element={<AdminGuard><AdminInstitutions /></AdminGuard>} />
-        <Route path="admin/institutions/:id" element={<AdminGuard><AdminInstitution /></AdminGuard>} />
-        <Route path="admin/alerts" element={<AdminGuard><AdminAlerts /></AdminGuard>} />
-        <Route path="admin/library" element={<AdminGuard><AdminLibrary /></AdminGuard>} />
-        <Route path="admin/reviews" element={<AdminGuard><AdminPosts kind="review" /></AdminGuard>} />
-        <Route path="admin/community" element={<AdminGuard><AdminCommunity /></AdminGuard>} />
-        <Route path="admin/alerts/new" element={<AdminGuard><AdminAlertNew /></AdminGuard>} />
-        <Route path="admin/alerts/:id" element={<AdminGuard><AdminAlertDetail /></AdminGuard>} />
+        <Route
+          path="team"
+          element={
+            <Guard perm="team:manage">
+              <Team />
+            </Guard>
+          }
+        />
+        <Route
+          path="admin"
+          element={
+            <AdminGuard>
+              <AdminOverview />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/institutions"
+          element={
+            <AdminGuard>
+              <AdminInstitutions />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/institutions/:id"
+          element={
+            <AdminGuard>
+              <AdminInstitution />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/alerts"
+          element={
+            <AdminGuard>
+              <AdminAlerts />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/library"
+          element={
+            <AdminGuard>
+              <AdminLibrary />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/reviews"
+          element={
+            <AdminGuard>
+              <AdminPosts kind="review" />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/community"
+          element={
+            <AdminGuard>
+              <AdminCommunity />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/alerts/new"
+          element={
+            <AdminGuard>
+              <AdminAlertNew />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/alerts/:id"
+          element={
+            <AdminGuard>
+              <AdminAlertDetail />
+            </AdminGuard>
+          }
+        />
+        <Route path="security" element={<Security />} />
         <Route path="playbooks" element={<Playbooks />} />
-        <Route path="reports" element=<Reports /> />
-        <Route path="risk" element=<RiskScore /> />
-        <Route path="departments" element={<Placeholder title="Department intelligence" intro="See which parts of your institution carry the most risk."
-          status="Not available yet." points={['Group your team into departments', 'See which departments respond to alerts, and how quickly', 'This needs a decision on how departments are defined for your institutions']} />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="risk" element={<RiskScore />} />
+        <Route
+          path="departments"
+          element={
+            <Placeholder
+              title="Department intelligence"
+              intro="See which parts of your institution carry the most risk."
+              status="Not available yet."
+              points={[
+                "Group your team into departments",
+                "See which departments respond to alerts, and how quickly",
+                "This needs a decision on how departments are defined for your institutions",
+              ]}
+            />
+          }
+        />
         <Route path="community" element=<Community /> />
       </Route>
     </Routes>
-  )
+  );
 }
